@@ -1,0 +1,10 @@
+import os
+
+# Telegram Bot Credentials
+BOT_TOKEN = os.getenv("8573297005:AAFRmTLU_l70HoVCwcaLr1ug1l7qipi1dJk")
+OWNER_ID = int(os.getenv("OWNER_ID", "123456789")) # Replace with your numeric Telegram ID
+
+# Conversation States
+(WAIT_MAT_FILE, WAIT_MAT_NAME, WAIT_CAT_NAME, WAIT_USER_ID, WAIT_REM_USER,
+ WAIT_ADMIN_ID, WAIT_REM_ADMIN, WAIT_BROADCAST, WAIT_SUPPORT_UNAME,
+ WAIT_SUPPORT_LINK, WAIT_SUPPORT_TEXT, WAIT_EDIT_NAME, WAIT_EDIT_FILE) = range(13)
