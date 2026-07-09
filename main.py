@@ -7,8 +7,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from config import BOT_TOKEN
 from database import init_db
 from handlers.admin import admin_command, admin_conv_handler
-# YAHAN CHANGE KIYA HAI 👇 (handlers.user ki jagah direct user likha hai)
-from user import start_command, handle_reply_keyboard
+from handlers.user import start_command, handle_reply_keyboard
 from handlers.callbacks import stateless_callback_router
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -28,8 +27,13 @@ def run_dummy_server():
 # ------------------------------------
 
 def main():
+    # Start Dummy server
     threading.Thread(target=run_dummy_server, daemon=True).start()
+    
+    # Init Database
     init_db()
+    
+    # Build Bot
     app = Application.builder().token(BOT_TOKEN).build()
 
     # Commands
@@ -39,7 +43,7 @@ def main():
     # Conversation Handlers (Admin panel inputs)
     app.add_handler(admin_conv_handler)
 
-    # Keyboard buttons press handle karne ke liye
+    # Handle Bottom Reply Keyboard Buttons
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply_keyboard))
 
     # Generic Callbacks
