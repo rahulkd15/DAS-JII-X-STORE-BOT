@@ -19,24 +19,17 @@ async def handle_reply_keyboard(update, context):
     text = update.message.text
     if not is_approved(user_id): return
 
-    # --- NAVIGATION ---
-    if text == "👑 Admin Panel":
-        if not is_admin(user_id): return await update.message.reply_text("❌ No permission.")
-        return await update.message.reply_text("👑 <b>Admin Panel</b>", parse_mode='HTML', reply_markup=get_admin_menu_kb(is_owner(user_id)))
+    # --- NAVIGATION & ADMIN ---
     if text == "🔙 Back to Main Menu":
         return await update.message.reply_text("🏠 <b>Main Menu</b>", parse_mode='HTML', reply_markup=get_main_reply_kb(user_id))
-    if text == "🔙 Back to Admin Menu":
-        if not is_admin(user_id): return
-        return await update.message.reply_text("👑 <b>Admin Panel</b>", parse_mode='HTML', reply_markup=get_admin_menu_kb(is_owner(user_id)))
-    if text == "📦 Manage Materials":
-        if not is_admin(user_id): return
-        return await update.message.reply_text("📦 <b>Manage Materials</b>", parse_mode='HTML', reply_markup=get_manage_materials_kb())
+    
     if text == "🆘 Support Settings":
         if not is_admin(user_id): return
         settings = execute_query("SELECT * FROM settings", fetch_all=True)
         s_dict = {s['key']: s['value'] for s in settings}
         msg = f"🆘 <b>Support Settings</b>\n\n<b>Username:</b> {escape_html(s_dict.get('support_username'))}\n<b>Link:</b> {escape_html(s_dict.get('support_link'))}\n<b>Text:</b> {escape_html(s_dict.get('contact_text'))}"
         return await update.message.reply_text(msg, parse_mode='HTML', reply_markup=get_support_settings_kb())
+    
     if text == "📊 Statistics":
         if not is_admin(user_id): return
         users = execute_query("SELECT COUNT(user_id) as count FROM users", fetch_all=True)[0]['count']
@@ -44,19 +37,21 @@ async def handle_reply_keyboard(update, context):
         cats = execute_query("SELECT COUNT(id) as count FROM categories", fetch_all=True)[0]['count']
         mats = execute_query("SELECT COUNT(id) as count FROM materials", fetch_all=True)[0]['count']
         return await update.message.reply_text(f"📊 <b>Bot Statistics</b>\n\n👥 Total Approved Users: {users}\n👑 Total Admins: {admins + 1}\n📂 Total Categories: {cats}\n📚 Total Materials: {mats}", parse_mode='HTML')
+    
     if text == "🆘 Contact Support":
         settings = execute_query("SELECT * FROM settings", fetch_all=True)
         s_dict = {s['key']: s['value'] for s in settings}
         kb = [[InlineKeyboardButton(s_dict.get('support_username', 'Support'), url=s_dict.get('support_link', 'https://t.me/'))]]
         return await update.message.reply_text(f"🆘 {escape_html(s_dict.get('contact_text', 'Contact Support:'))}", parse_mode='HTML', reply_markup=InlineKeyboardMarkup(kb))
 
-    # --- USER BROWSING ---
+    # --- USER BROWSING CATEGORIES ---
     cat = execute_query("SELECT id FROM categories WHERE name=?", (text,), fetch=True)
     if cat:
         mats = execute_query("SELECT id FROM materials WHERE category_id=?", (cat['id'],), fetch_all=True)
         if not mats: return await update.message.reply_text("📂 This category is empty.", reply_markup=get_main_reply_kb(user_id))
         return await update.message.reply_text(f"📚 <b>{text} Materials:</b>", parse_mode='HTML', reply_markup=get_materials_kb(text, add_cancel=False, add_back_main=True))
 
+    # --- USER SELECTS A MATERIAL ---
     mat = execute_query("SELECT * FROM materials WHERE name=?", (text,), fetch=True)
     if mat:
         fid, ftype = mat['file_id'], mat['file_type']
