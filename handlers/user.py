@@ -19,7 +19,7 @@ async def handle_reply_keyboard(update, context):
     text = update.message.text
     if not is_approved(user_id): return
 
-    # --- NAVIGATION & ADMIN ---
+    # --- NAVIGATION ---
     if text == "🔙 Back to Main Menu":
         return await update.message.reply_text("🏠 <b>Main Menu</b>", parse_mode='HTML', reply_markup=get_main_reply_kb(user_id))
     
@@ -44,14 +44,14 @@ async def handle_reply_keyboard(update, context):
         kb = [[InlineKeyboardButton(s_dict.get('support_username', 'Support'), url=s_dict.get('support_link', 'https://t.me/'))]]
         return await update.message.reply_text(f"🆘 {escape_html(s_dict.get('contact_text', 'Contact Support:'))}", parse_mode='HTML', reply_markup=InlineKeyboardMarkup(kb))
 
-    # --- USER BROWSING CATEGORIES ---
+    # --- CATEGORY CHECK ---
     cat = execute_query("SELECT id FROM categories WHERE name=?", (text,), fetch=True)
     if cat:
         mats = execute_query("SELECT id FROM materials WHERE category_id=?", (cat['id'],), fetch_all=True)
         if not mats: return await update.message.reply_text("📂 This category is empty.", reply_markup=get_main_reply_kb(user_id))
         return await update.message.reply_text(f"📚 <b>{text} Materials:</b>", parse_mode='HTML', reply_markup=get_materials_kb(text, add_cancel=False, add_back_main=True))
 
-    # --- USER SELECTS A MATERIAL ---
+    # --- MATERIAL FETCH ---
     mat = execute_query("SELECT * FROM materials WHERE name=?", (text,), fetch=True)
     if mat:
         fid, ftype = mat['file_id'], mat['file_type']
