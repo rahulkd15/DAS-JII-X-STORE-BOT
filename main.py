@@ -6,6 +6,8 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 
 from config import BOT_TOKEN
 from database import init_db
+
+# YAHAN SARE IMPORTS THEEK HAIN 👇
 from handlers.admin import admin_command, admin_conv_handler
 from handlers.user import start_command, handle_reply_keyboard
 from handlers.callbacks import stateless_callback_router
@@ -23,11 +25,12 @@ class DummyHandler(BaseHTTPRequestHandler):
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), DummyHandler)
+    print(f"Dummy server running on port {port}")
     server.serve_forever()
 # ------------------------------------
 
 def main():
-    # Start Dummy server
+    # Start Dummy server for Railway
     threading.Thread(target=run_dummy_server, daemon=True).start()
     
     # Init Database
@@ -43,10 +46,10 @@ def main():
     # Conversation Handlers (Admin panel inputs)
     app.add_handler(admin_conv_handler)
 
-    # Handle Bottom Reply Keyboard Buttons
+    # Handle Bottom Reply Keyboard Buttons (Niche wale buttons ke liye)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply_keyboard))
 
-    # Generic Callbacks
+    # Generic Callbacks (Inline buttons ke liye)
     app.add_handler(CallbackQueryHandler(stateless_callback_router))
 
     print("Bot is up and running...")
