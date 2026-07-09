@@ -15,12 +15,13 @@ def build_kb(buttons, cols=2, add_cancel=False, add_back_main=False):
     if add_back_main: kb.append([KeyboardButton("🔙 Back to Main Menu")])
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
+# YAHAN DEKH BHAI: Saare buttons seedhe main keyboard me daal diye hain!
 def get_main_reply_kb(user_id):
     cats = execute_query("SELECT name FROM categories", fetch_all=True)
     kb = []
     row = []
     
-    # 1. Normal User Buttons (Categories)
+    # 1. Normal User Buttons (Courses, Hacks, etc.)
     for cat in cats:
         row.append(KeyboardButton(cat['name']))
         if len(row) == 2:
@@ -30,7 +31,7 @@ def get_main_reply_kb(user_id):
         
     kb.append([KeyboardButton("🆘 Contact Support")])
     
-    # 2. Admin Buttons (Directly on the main keyboard!)
+    # 2. Admin Buttons (Seedhe typing keyboard me, Courses ke niche!)
     if is_admin(user_id):
         kb.append([KeyboardButton("📦 Add Material"), KeyboardButton("🗑 Delete Material")])
         kb.append([KeyboardButton("✏️ Edit Material"), KeyboardButton("➕ Add Category")])
