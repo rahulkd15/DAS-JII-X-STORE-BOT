@@ -1,7 +1,7 @@
 import os
 
 # Telegram Bot Credentials
-BOT_TOKEN = "8573297005:AAFRmTLU_I7OHoVCwcaLr1ug1l7qipi1dJk"
+BOT_TOKEN = "8573297005:AAGxtvO9U50aULxzpS1nDKHJxKnXa6fxeoE"
 OWNER_ID = "5695882571"
 
 # Conversation States
