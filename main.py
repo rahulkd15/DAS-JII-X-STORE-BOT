@@ -2,17 +2,18 @@ import logging
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
 from config import BOT_TOKEN
 from database import init_db
 from handlers.admin import admin_command, admin_conv_handler
-from handlers.user import start_command
+# YAHAN CHANGE KIYA HAI 👇 (handlers.user ki jagah direct user likha hai)
+from user import start_command, handle_reply_keyboard
 from handlers.callbacks import stateless_callback_router
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# --- NAKLI (DUMMY) WEB SERVER RAILWAY KO TRICK KARNE KE LIYE ---
+# --- DUMMY WEB SERVER FOR RAILWAY ---
 class DummyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -21,30 +22,29 @@ class DummyHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot is running smoothly!")
 
 def run_dummy_server():
-    # Railway automatically ek PORT deta hai, hum usko use karenge
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), DummyHandler)
-    print(f"Dummy web server running on port {port}")
     server.serve_forever()
-# ---------------------------------------------------------------
+# ------------------------------------
 
 def main():
-    # Dummy server ko background thread mein start karo
     threading.Thread(target=run_dummy_server, daemon=True).start()
-
-    # Database initialize karo
     init_db()
-
-    # Bot application build karo
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Handlers add karo
+    # Commands
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("admin", admin_command))
+
+    # Conversation Handlers (Admin panel inputs)
     app.add_handler(admin_conv_handler)
+
+    # Keyboard buttons press handle karne ke liye
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply_keyboard))
+
+    # Generic Callbacks
     app.add_handler(CallbackQueryHandler(stateless_callback_router))
 
-    # Bot ko start karo
     print("Bot is up and running...")
     app.run_polling()
 
