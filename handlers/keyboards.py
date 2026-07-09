@@ -1,23 +1,33 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from database import execute_query
+from utils import is_admin
 
-def get_main_menu_kb():
+# --- Niche wala Typing Area Keyboard ---
+def get_main_reply_kb(user_id):
     cats = execute_query("SELECT * FROM categories", fetch_all=True)
     kb = []
     
-    # 2 buttons per row for dynamic categories
+    # Categories ko 2 columns me dikhane ke liye
     row = []
     for cat in cats:
-        row.append(InlineKeyboardButton(cat['name'], callback_data=f"user_cat_{cat['id']}"))
+        row.append(KeyboardButton(cat['name']))
         if len(row) == 2:
             kb.append(row)
             row = []
     if row:
         kb.append(row)
         
-    kb.append([InlineKeyboardButton("🆘 Contact Support", callback_data="user_support")])
-    return InlineKeyboardMarkup(kb)
+    kb.append([KeyboardButton("🆘 Contact Support")])
+    
+    # MAGIC: Agar user Admin/Owner hai, toh hi usko ye Admin Panel ka button dikhega
+    if is_admin(user_id):
+        kb.append([KeyboardButton("👑 Admin Panel")])
+        
+    # resize_keyboard=True se button screen ke hisaab se chote ho jate hain
+    return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
+
+# --- Admin Panel ke andar wale Inline Buttons (Ye waise hi rahenge) ---
 def get_admin_menu_kb(is_owner_flag=False):
     kb = [
         [InlineKeyboardButton("📦 Add Materials", callback_data="admin_materials")],
