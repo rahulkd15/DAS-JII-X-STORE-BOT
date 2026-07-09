@@ -3,7 +3,8 @@ from config import OWNER_ID
 import html
 
 def is_owner(user_id):
-    return user_id == OWNER_ID
+    # Ye line tujhe 100% owner bana degi
+    return str(user_id) == str(OWNER_ID)
 
 def is_admin(user_id):
     if is_owner(user_id):
@@ -18,7 +19,6 @@ def is_approved(user_id):
     return bool(user)
 
 def extract_file_info(message):
-    """Parses various types of media, documents, and texts to obtain File ID and Type"""
     if message.document:
         return message.document.file_id, "document"
     elif message.video:
