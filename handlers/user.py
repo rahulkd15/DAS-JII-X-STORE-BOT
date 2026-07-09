@@ -7,6 +7,7 @@ from handlers.keyboards import get_main_reply_kb, get_admin_menu_kb
 # --- Start Command ---
 async def start_command(update, context):
     user_id = update.effective_user.id
+    
     if not is_approved(user_id):
         settings = execute_query("SELECT * FROM settings", fetch_all=True)
         s_dict = {s['key']: s['value'] for s in settings}
