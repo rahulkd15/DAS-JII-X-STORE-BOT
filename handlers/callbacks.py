@@ -2,7 +2,9 @@ import logging
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from database import execute_query
 from utils import is_admin, is_approved, escape_html, is_owner
-from handlers.keyboards import get_main_menu_kb, get_admin_menu_kb
+
+# YAHAN IMPORT THEEK KIYA HAI 👇
+from handlers.keyboards import get_admin_menu_kb, get_main_reply_kb
 
 async def stateless_callback_router(update, context):
     """Routes callbacks that do not require state management text input."""
@@ -138,4 +140,7 @@ async def stateless_callback_router(update, context):
             await query.edit_message_text(f"🆘 {escape_html(s_dict.get('contact_text', 'For any issues, please contact support.'))}", parse_mode='HTML', reply_markup=InlineKeyboardMarkup(kb))
             
         elif data == "user_main_menu":
-            await query.edit_message_text("Welcome to the Materials Bot! Please select an option below:", reply_markup=get_main_menu_kb())
+            # YAHAN BHI FIX KIYA HAI 👇 (Inline menu delete hoke reply keyboard dikhega)
+            await query.message.delete()
+            kb = get_main_reply_kb(user_id)
+            await context.bot.send_message(chat_id=user_id, text="Welcome to the Materials Bot! Please select an option from the menu below 👇", reply_markup=kb)
