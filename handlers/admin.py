@@ -9,34 +9,40 @@ async def cancel_flow(update, context): pass
 
 async def handle_cancel(update, context):
     if update.message.text == "❌ Cancel":
-        await update.message.reply_text("❌ Action cancelled.", reply_markup=get_main_reply_kb(update.effective_user.id))
+        await update.message.reply_text("❌ Action cancelled.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
         return True
     return False
 
-# --- ADD MATERIAL ---
+# --- ADD MATERIAL (ONE-CLICK UPLOAD) ---
 async def prompt_add_mat(update, context):
     await update.message.reply_text("Select a category to add the material to:", reply_markup=get_categories_kb())
     return WAIT_ADD_MAT_CAT
+
 async def recv_add_mat_cat(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     cat = execute_query("SELECT id FROM categories WHERE name=?", (update.message.text,), fetch=True)
     if not cat: return WAIT_ADD_MAT_CAT
     context.user_data['temp_cat_id'] = cat['id']
-    await update.message.reply_text("📤 Send the File, Text, Forwarded Message, or Link:", reply_markup=get_cancel_kb())
+    await update.message.reply_text("📤 <b>Send the COMPLETE Post now.</b>\n(Send Photo/Video/Document with a Caption, OR just send Text/Links).\n\n<i>Note: Your caption/text will automatically become the Material's Name!</i>", parse_mode='HTML', reply_markup=get_cancel_kb())
     return WAIT_MAT_FILE
+
 async def recv_mat_file(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     file_id, ftype = extract_file_info(update.message)
     if not file_id: return WAIT_MAT_FILE
-    context.user_data['temp_file_id'] = file_id
-    context.user_data['temp_file_type'] = ftype
-    await update.message.reply_text("📝 Enter the Name for this material:", reply_markup=get_cancel_kb())
-    return WAIT_MAT_NAME
-async def recv_mat_name(update, context):
-    if await handle_cancel(update, context): return ConversationHandler.END
+    
+    # MAGIC: Name automatically decide hoga caption ya file name se
+    mat_name = "Untitled Material"
+    if update.message.caption:
+        mat_name = update.message.caption.split('\n')[0][:50] # Caption ki pehli line
+    elif update.message.text:
+        mat_name = update.message.text.split('\n')[0][:50] # Text ki pehli line
+    elif update.message.document:
+        mat_name = update.message.document.file_name[:50] # Document ka naam
+        
     execute_query("INSERT INTO materials (name, category_id, file_id, file_type) VALUES (?, ?, ?, ?)", 
-                  (update.message.text, context.user_data['temp_cat_id'], context.user_data['temp_file_id'], context.user_data['temp_file_type']))
-    await update.message.reply_text("✅ Material Added Successfully!", reply_markup=get_main_reply_kb(update.effective_user.id))
+                  (mat_name, context.user_data['temp_cat_id'], file_id, ftype))
+    await update.message.reply_text(f"✅ Material '{mat_name}' Added Successfully!", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 # --- DELETE MATERIAL ---
@@ -59,8 +65,8 @@ async def recv_del_mat_name(update, context):
 async def recv_del_confirm(update, context):
     if update.message.text == "✅ Yes":
         execute_query("DELETE FROM materials WHERE id=?", (context.user_data['del_mat_id'],))
-        await update.message.reply_text("✅ Deleted.", reply_markup=get_main_reply_kb(update.effective_user.id))
-    else: await update.message.reply_text("❌ Cancelled.", reply_markup=get_main_reply_kb(update.effective_user.id))
+        await update.message.reply_text("✅ Deleted.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
+    else: await update.message.reply_text("❌ Cancelled.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 # --- EDIT MATERIAL ---
@@ -93,21 +99,21 @@ async def recv_edit_action(update, context):
 async def recv_edit_name_new(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     execute_query("UPDATE materials SET name=? WHERE id=?", (update.message.text, context.user_data['edit_mat_id']))
-    await update.message.reply_text("✅ Name updated.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Name updated.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 async def recv_edit_file_new(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     file_id, ftype = extract_file_info(update.message)
     if not file_id: return WAIT_EDIT_FILE_NEW
     execute_query("UPDATE materials SET file_id=?, file_type=? WHERE id=?", (file_id, ftype, context.user_data['edit_mat_id']))
-    await update.message.reply_text("✅ File replaced.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ File replaced.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 async def recv_edit_move_cat(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     cat = execute_query("SELECT id FROM categories WHERE name=?", (update.message.text,), fetch=True)
     if not cat: return WAIT_EDIT_MOVE_CAT
     execute_query("UPDATE materials SET category_id=? WHERE id=?", (cat['id'], context.user_data['edit_mat_id']))
-    await update.message.reply_text("✅ Moved successfully.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Moved successfully.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 # --- OTHERS ---
@@ -117,7 +123,7 @@ async def prompt_add_cat(update, context):
 async def recv_cat_name(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     execute_query("INSERT INTO categories (name) VALUES (?)", (update.message.text,))
-    await update.message.reply_text("✅ Category created.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Category created.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_add_user(update, context):
@@ -127,7 +133,7 @@ async def handle_add_user(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     try: execute_query("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (int(update.message.text),))
     except: pass
-    await update.message.reply_text("✅ User added.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ User added.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_rem_user(update, context):
@@ -137,7 +143,7 @@ async def handle_rem_user(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     try: execute_query("DELETE FROM users WHERE user_id=?", (int(update.message.text),))
     except: pass
-    await update.message.reply_text("✅ User removed.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ User removed.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_add_admin(update, context):
@@ -147,7 +153,7 @@ async def handle_add_admin(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     try: execute_query("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (int(update.message.text),))
     except: pass
-    await update.message.reply_text("✅ Admin added.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Admin added.", reply_markup=get_admin_menu_kb(True))
     return ConversationHandler.END
 
 async def prompt_rem_admin(update, context):
@@ -157,7 +163,7 @@ async def handle_rem_admin(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     try: execute_query("DELETE FROM admins WHERE user_id=?", (int(update.message.text),))
     except: pass
-    await update.message.reply_text("✅ Admin removed.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Admin removed.", reply_markup=get_admin_menu_kb(True))
     return ConversationHandler.END
 
 async def prompt_broadcast(update, context):
@@ -170,7 +176,7 @@ async def handle_broadcast(update, context):
     for u in users:
         try: await context.bot.send_message(chat_id=u['user_id'], text=update.message.text)
         except: pass
-    await update.message.reply_text("✅ Announcement sent.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Announcement sent.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_sup_uname(update, context):
@@ -179,7 +185,7 @@ async def prompt_sup_uname(update, context):
 async def handle_sup_uname(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     execute_query("INSERT OR REPLACE INTO settings (key, value) VALUES ('support_username', ?)", (update.message.text,))
-    await update.message.reply_text("✅ Username updated.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Username updated.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_sup_link(update, context):
@@ -188,7 +194,7 @@ async def prompt_sup_link(update, context):
 async def handle_sup_link(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     execute_query("INSERT OR REPLACE INTO settings (key, value) VALUES ('support_link', ?)", (update.message.text,))
-    await update.message.reply_text("✅ Link updated.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Link updated.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 async def prompt_sup_text(update, context):
@@ -197,10 +203,9 @@ async def prompt_sup_text(update, context):
 async def handle_sup_text(update, context):
     if await handle_cancel(update, context): return ConversationHandler.END
     execute_query("INSERT OR REPLACE INTO settings (key, value) VALUES ('contact_text', ?)", (update.message.text,))
-    await update.message.reply_text("✅ Text updated.", reply_markup=get_main_reply_kb(update.effective_user.id))
+    await update.message.reply_text("✅ Text updated.", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
-# --- ASSEMBLE CONVERSATION ---
 admin_conv_handler = ConversationHandler(
     entry_points=[
         MessageHandler(filters.Regex('^📦 Add Material$'), prompt_add_mat),
@@ -219,7 +224,6 @@ admin_conv_handler = ConversationHandler(
     states={
         WAIT_ADD_MAT_CAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_add_mat_cat)],
         WAIT_MAT_FILE: [MessageHandler(filters.ALL & ~filters.COMMAND, recv_mat_file)],
-        WAIT_MAT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_mat_name)],
         WAIT_DEL_MAT_CAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_del_mat_cat)],
         WAIT_DEL_MAT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_del_mat_name)],
         WAIT_DEL_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_del_confirm)],
