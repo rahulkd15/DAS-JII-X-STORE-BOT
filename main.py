@@ -36,8 +36,8 @@ def main():
     
     print("Bot is up and running...")
     
-    # YAHAN SPEED FIX KIYA HAI 👇 (Ye purane messages ignore karega aur instantly reply dega)
-    app.run_polling(drop_pending_updates=True)
+    # 🔥 SPEED FIX: Ye options bot ko instantly respond karne me help karte hain
+    app.run_polling(drop_pending_updates=True, pool_timeout=30, read_timeout=30, write_timeout=30)
 
 if __name__ == "__main__":
     main()
