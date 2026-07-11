@@ -13,7 +13,7 @@ async def handle_cancel(update, context):
         return True
     return False
 
-# --- ADD MATERIAL (ONE-CLICK UPLOAD) ---
+# --- ADD MATERIAL (NAAM PEHLE, FILE BAAD MEIN) ---
 async def prompt_add_mat(update, context):
     await update.message.reply_text("Select a category to add the material to:", reply_markup=get_categories_kb())
     return WAIT_ADD_MAT_CAT
@@ -23,7 +23,17 @@ async def recv_add_mat_cat(update, context):
     cat = execute_query("SELECT id FROM categories WHERE name=?", (update.message.text,), fetch=True)
     if not cat: return WAIT_ADD_MAT_CAT
     context.user_data['temp_cat_id'] = cat['id']
-    await update.message.reply_text("📤 <b>Send the COMPLETE Post now.</b>\n(Send Photo/Video/Document with a Caption, OR just send Text/Links).\n\n<i>Note: Your caption/text will automatically become the Material's Name!</i>", parse_mode='HTML', reply_markup=get_cancel_kb())
+    
+    # PEHLE NAAM POOCHEGA
+    await update.message.reply_text("📝 Enter the **Name** for this material\n*(This name will be shown on the button for users)*:", parse_mode='Markdown', reply_markup=get_cancel_kb())
+    return WAIT_MAT_NAME
+
+async def recv_mat_name(update, context):
+    if await handle_cancel(update, context): return ConversationHandler.END
+    context.user_data['temp_mat_name'] = update.message.text
+    
+    # FIR FILE POOCHEGA
+    await update.message.reply_text(f"📤 Now send the File, Photo, Video, Text, or Link for **'{update.message.text}'**:", parse_mode='Markdown', reply_markup=get_cancel_kb())
     return WAIT_MAT_FILE
 
 async def recv_mat_file(update, context):
@@ -31,18 +41,9 @@ async def recv_mat_file(update, context):
     file_id, ftype = extract_file_info(update.message)
     if not file_id: return WAIT_MAT_FILE
     
-    # MAGIC: Name automatically decide hoga caption ya file name se
-    mat_name = "Untitled Material"
-    if update.message.caption:
-        mat_name = update.message.caption.split('\n')[0][:50] # Caption ki pehli line
-    elif update.message.text:
-        mat_name = update.message.text.split('\n')[0][:50] # Text ki pehli line
-    elif update.message.document:
-        mat_name = update.message.document.file_name[:50] # Document ka naam
-        
     execute_query("INSERT INTO materials (name, category_id, file_id, file_type) VALUES (?, ?, ?, ?)", 
-                  (mat_name, context.user_data['temp_cat_id'], file_id, ftype))
-    await update.message.reply_text(f"✅ Material '{mat_name}' Added Successfully!", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
+                  (context.user_data['temp_mat_name'], context.user_data['temp_cat_id'], file_id, ftype))
+    await update.message.reply_text(f"✅ Material '{context.user_data['temp_mat_name']}' Added Successfully!", reply_markup=get_admin_menu_kb(is_owner(update.effective_user.id)))
     return ConversationHandler.END
 
 # --- DELETE MATERIAL ---
@@ -223,6 +224,7 @@ admin_conv_handler = ConversationHandler(
     ],
     states={
         WAIT_ADD_MAT_CAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_add_mat_cat)],
+        WAIT_MAT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_mat_name)],
         WAIT_MAT_FILE: [MessageHandler(filters.ALL & ~filters.COMMAND, recv_mat_file)],
         WAIT_DEL_MAT_CAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_del_mat_cat)],
         WAIT_DEL_MAT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_del_mat_name)],
